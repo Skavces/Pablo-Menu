@@ -28,7 +28,7 @@ docker compose up -d --build
 ## Uygulama Adresleri
 
 - **Menü**: http://localhost
-- **Admin Panel**: http://localhost/admin/login
+- **Admin Panel**: http://localhost/pb-admin
 - **MinIO Console**: http://localhost:9001
 
 ## Production'da dikkat edilmesi gerekenler

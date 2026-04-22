@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
 import { v4 as uuidv4 } from 'uuid';
+import * as sharp from 'sharp';
 
 @Injectable()
 export class UploadService implements OnModuleInit {
@@ -43,11 +44,15 @@ export class UploadService implements OnModuleInit {
   }
 
   async uploadProductImage(productId: string, file: Express.Multer.File): Promise<string> {
-    const ext = file.mimetype.split('/')[1];
-    const objectName = `products/${productId}/${uuidv4()}.${ext}`;
+    const processedBuffer = await sharp(file.buffer)
+      .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer();
 
-    await this.client.putObject(this.bucket, objectName, file.buffer, file.size, {
-      'Content-Type': file.mimetype,
+    const objectName = `products/${productId}/${uuidv4()}.webp`;
+
+    await this.client.putObject(this.bucket, objectName, processedBuffer, processedBuffer.length, {
+      'Content-Type': 'image/webp',
     });
 
     return `${this.publicUrl}/${this.bucket}/${objectName}`;

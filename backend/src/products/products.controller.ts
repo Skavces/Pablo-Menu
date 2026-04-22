@@ -42,6 +42,11 @@ export class ProductsController {
     return this.productsService.create(dto);
   }
 
+  @Patch('reorder')
+  reorder(@Body() body: { items: { id: string; order: number }[] }) {
+    return this.productsService.reorder(body.items);
+  }
+
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProductDto) {
     return this.productsService.update(id, dto);

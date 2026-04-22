@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../api/client';
 import type { Category } from '../types';
 import ProductCard from '../components/menu/ProductCard';
@@ -13,7 +13,6 @@ export default function MenuPage() {
   });
 
   const [activeSlug, setActiveSlug] = useState<string>('');
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const visibleCategories = activeSlug === ''
     ? categories
@@ -21,13 +20,7 @@ export default function MenuPage() {
 
   const handleBadgeClick = (slug: string) => {
     setActiveSlug(slug);
-    if (slug !== '') {
-      setTimeout(() => {
-        sectionRefs.current[slug]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (isLoading) {
@@ -94,7 +87,7 @@ export default function MenuPage() {
           visibleCategories.map((cat) => (
             <section
               key={cat.id}
-              ref={(el) => { sectionRefs.current[cat.slug] = el; }}
+  
               className="mt-10"
             >
               {/* Category header */}

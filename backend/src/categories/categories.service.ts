@@ -53,6 +53,12 @@ export class CategoriesService {
     return this.categoryRepository.save(cat);
   }
 
+  async reorder(items: { id: string; order: number }[]) {
+    await Promise.all(
+      items.map(({ id, order }) => this.categoryRepository.update(id, { order })),
+    );
+  }
+
   async remove(id: string) {
     const cat = await this.findOne(id);
     await this.categoryRepository.remove(cat);

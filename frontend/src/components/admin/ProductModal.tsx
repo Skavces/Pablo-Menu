@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { api } from '../../api/client';
 import type { Category, Product } from '../../types';
-import { X } from 'lucide-react';
+import { X, ImagePlus, Trash2 } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -15,12 +15,15 @@ interface Props {
 export default function ProductModal({ open, product, categories, onClose }: Props) {
   const qc = useQueryClient();
   const isEdit = !!product;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [order, setOrder] = useState(0);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -28,22 +31,44 @@ export default function ProductModal({ open, product, categories, onClose }: Pro
       setDescription(product?.description ?? '');
       setPrice(product ? String(product.price) : '');
       setCategoryId(product?.categoryId ?? (categories[0]?.id ?? ''));
-      setOrder(product?.order ?? 0);
+      setPendingImage(null);
+      setPreviewUrl(null);
+      setRemoveImage(false);
     }
   }, [open, product, categories]);
 
+  useEffect(() => {
+    if (!pendingImage) return;
+    const url = URL.createObjectURL(pendingImage);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingImage]);
+
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = {
         name: name.trim(),
         description: description.trim() || undefined,
         price,
         categoryId,
-        order,
       };
-      return isEdit
-        ? api.patch(`/products/${product!.id}`, payload)
-        : api.post('/products', payload);
+
+      let savedProduct: Product;
+      if (isEdit) {
+        const res = await api.patch(`/products/${product!.id}`, payload);
+        savedProduct = res.data;
+      } else {
+        const res = await api.post('/products', payload);
+        savedProduct = res.data;
+      }
+
+      if (pendingImage) {
+        const form = new FormData();
+        form.append('image', pendingImage);
+        await api.post(`/products/${savedProduct.id}/image`, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-products'] });
@@ -54,6 +79,8 @@ export default function ProductModal({ open, product, categories, onClose }: Pro
       toast.error(err?.response?.data?.message ?? 'Hata oluştu');
     },
   });
+
+  const currentImageUrl = removeImage ? null : (previewUrl ?? product?.imageUrl ?? null);
 
   if (!open) return null;
 
@@ -73,6 +100,54 @@ export default function ProductModal({ open, product, categories, onClose }: Pro
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="flex flex-col gap-4">
+
+          {/* Görsel */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Görsel <span className="text-gray-400 font-normal">(opsiyonel)</span></label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden border-2 border-dashed border-cream-300 hover:border-pablo-red transition group bg-cream-100"
+              >
+                {currentImageUrl ? (
+                  <img src={currentImageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 group-hover:text-pablo-red transition">
+                    <ImagePlus className="w-6 h-6" />
+                    <span className="text-xs">Ekle</span>
+                  </div>
+                )}
+                {currentImageUrl && (
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <ImagePlus className="w-5 h-5 text-white" />
+                  </div>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) { setPendingImage(file); setRemoveImage(false); }
+                  e.target.value = '';
+                }}
+              />
+              {currentImageUrl && (
+                <button
+                  type="button"
+                  onClick={() => { setPendingImage(null); setPreviewUrl(null); setRemoveImage(true); }}
+                  className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 transition"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Görseli kaldır
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Ürün Adı</label>
             <input
@@ -97,30 +172,18 @@ export default function ProductModal({ open, product, categories, onClose }: Pro
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fiyat (₺)</label>
-              <input
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-full border border-cream-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pablo-black/20"
-                placeholder="0.00"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sıra</label>
-              <input
-                type="number"
-                value={order}
-                onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-                min={0}
-                className="w-full border border-cream-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pablo-black/20"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fiyat (₺)</label>
+            <input
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              className="w-full border border-cream-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pablo-black/20"
+              placeholder="0.00"
+            />
           </div>
 
           <div>

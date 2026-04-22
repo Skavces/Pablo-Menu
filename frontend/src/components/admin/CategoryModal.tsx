@@ -26,14 +26,12 @@ export default function CategoryModal({ open, category, onClose }: Props) {
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [order, setOrder] = useState(0);
   const [slugEdited, setSlugEdited] = useState(false);
 
   useEffect(() => {
     if (open) {
       setName(category?.name ?? '');
       setSlug(category?.slug ?? '');
-      setOrder(category?.order ?? 0);
       setSlugEdited(false);
     }
   }, [open, category]);
@@ -45,7 +43,7 @@ export default function CategoryModal({ open, category, onClose }: Props) {
 
   const save = useMutation({
     mutationFn: () => {
-      const payload = { name: name.trim(), slug: slug.trim(), order };
+      const payload = { name: name.trim(), slug: slug.trim() };
       return isEdit
         ? api.patch(`/categories/${category!.id}`, payload)
         : api.post('/categories', payload);
@@ -100,17 +98,6 @@ export default function CategoryModal({ open, category, onClose }: Props) {
               maxLength={120}
               className="w-full border border-cream-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pablo-black/20 font-mono"
               placeholder="soguk-kahveler"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sıra</label>
-            <input
-              type="number"
-              value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-              min={0}
-              className="w-full border border-cream-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-pablo-black/20"
             />
           </div>
 

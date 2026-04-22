@@ -25,6 +25,12 @@ export class CategoriesController {
     return this.categoriesService.create(dto);
   }
 
+  @Patch('reorder')
+  @UseGuards(JwtAuthGuard)
+  reorder(@Body() body: { items: { id: string; order: number }[] }) {
+    return this.categoriesService.reorder(body.items);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCategoryDto) {

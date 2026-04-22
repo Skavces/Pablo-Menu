@@ -32,7 +32,7 @@ export default function ProductCard({ product, isLast }: Props) {
         {hasImage ? (
           <button
             onClick={() => setImgOpen(true)}
-            className="w-32 h-32 rounded-2xl overflow-hidden flex-shrink-0 bg-cream-200 shadow-sm active:scale-95 transition-transform"
+            className="w-40 h-40 rounded-2xl overflow-hidden flex-shrink-0 bg-cream-200 shadow-sm active:scale-95 transition-transform"
           >
             <img
               src={product.imageUrl ?? undefined}
